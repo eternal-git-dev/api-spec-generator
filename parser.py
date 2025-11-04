@@ -114,11 +114,9 @@ def build_openapi(endpoints: List[Dict[str, Any]]) -> Dict[str, Any]:
                     }
                 }
             }
-            # параметры из signature -> path/query heuristic
             if ep["params"]:
                 params_list = []
                 for p in ep["params"]:
-                    # грубая логика: если имя содержит 'id' — path param
                     if "id" in p["name"].lower():
                         params_list.append({
                             "name": p["name"],
