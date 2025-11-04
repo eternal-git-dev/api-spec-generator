@@ -64,7 +64,6 @@ def parse_file(filename: str):
                                 ann = arg.annotation.attr
                             else:
                                 ann = ast.unparse(arg.annotation)
-                        #print("ann", arg.arg, ann)
                         params.append({"name": arg.arg, "type": ann})
                         endpoints.append({
                             "function": node.name,
