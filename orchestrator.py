@@ -72,7 +72,7 @@ def safe_json_loads(json_str: str):
             fixed_json = re.sub(r'\}\s*\}\s*$', '}}', fixed_json)
             return json.loads(fixed_json)
         except:
-            return NoneC:\Users\eternal\PycharmProjects\LLM
+            return None
 
 def parse_methods(yaml_file: dict, n: int):
 
