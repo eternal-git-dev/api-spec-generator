@@ -51,10 +51,7 @@ def parse_file(filename: str):
                     else:
                         path, methods = None, None
                     doc = ast.get_docstring(node) or ""
-                    #print('doc:', doc)
                     summary = doc.strip().splitlines()[0] if doc else ""
-                    #print(path, methods)
-                    #print(doc, summary)
                     params = []
                     for arg in node.args.args:
                         if arg.arg == "self":
