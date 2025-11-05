@@ -113,7 +113,6 @@ def add_documentation(files_notation_list: list, docs_list: dict) -> dict:
             if path in file_content.get('paths', {}):
                 path_info = file_content['paths'][path]
                 if http_method in path_info:
-                    # Добавляем документацию
                     if 'summary' in doc_item and doc_item['summary']:
                         path_info[http_method]['summary'] = doc_item['summary']
                     if 'description' in doc_item and doc_item['description']:
@@ -121,41 +120,38 @@ def add_documentation(files_notation_list: list, docs_list: dict) -> dict:
 
     return result
 
-async def get_documentation(method: list[dict[str, Any]], llm: LLM) -> list | None:
-    llm_response = await llm.generate(method)
-
-    json_response = parse_llm_response(llm_response)
-    if not json_response:
-        return None
-
-    parsed_response = safe_json_loads(json_response)
-    if parsed_response and isinstance(parsed_response, list):
-        return parsed_response
-
-    return None
-
-async def process_documentation(notations: List):
-    llm = LLM()
+async def process_documentation(notations: List, max_concurrency: int = 1):
+    llm = await asyncio.to_thread(LLM)
+    sem = asyncio.Semaphore(max_concurrency)
     result = {}
 
+    async def safe_get_doc(file_name, method_chunk):
+        async with sem:
+            try:
+                raw = await asyncio.to_thread(llm.generate, method_chunk)
+            except Exception as e:
+                print("LLM generate failed")
+                return file_name, None, e
+            json_part = parse_llm_response(raw)
+            parsed = safe_json_loads(json_part) if json_part else None
+            return file_name, parsed, None
+
     tasks = []
-    tasks_mapping = []
 
     for file_name, methods in notations:
-        methods = parse_methods(methods, n=2)
-        for method in methods:
-            task = asyncio.create_task(get_documentation(method, llm))
-            tasks.append(task)
-            tasks_mapping.append(file_name)
+        chunks = parse_methods(methods, n=2)
+        for chunk in chunks:
+            tasks.append(asyncio.create_task(safe_get_doc(file_name, chunk)))
 
-    documentation_result = await asyncio.gather(*tasks, return_exceptions=True)
-
-    for file_name, doc_result in zip(tasks_mapping, documentation_result):
+    for task in asyncio.as_completed(tasks):
+        file_name, parsed, exc = await task
         if file_name not in result:
             result[file_name] = []
-
-        if doc_result and isinstance(doc_result, list):
-            result[file_name].extend(doc_result)
+        if exc:
+            print("Error while generating for %s: %s", file_name, exc)
+            continue
+        if parsed and isinstance(parsed, list):
+            result[file_name].extend(parsed)
 
     return result
 
