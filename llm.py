@@ -44,8 +44,7 @@ class LLM():
         return "\n\n".join(prompt)
 
 
-    async def generate(self, input):
-        print(f"GPU memory: {torch.cuda.memory_allocated() / 1024 ** 3:.2f}GB")
+    def generate(self, input):
         prompt = self._build_prompt(input)
         inputs = self.tokenizer(
             prompt,
@@ -56,19 +55,18 @@ class LLM():
         ).to(self.device)
 
         input_len = inputs["input_ids"].shape[1]
-
-        outputs = self.model.generate(
-            **inputs,
-            repetition_penalty=self.repetition_penalty,
-            max_new_tokens=self.max_new_tokens,
-            temperature=self.temperature,
-            top_p=self.top_p,
-            num_beams=self.num_beams,
-            do_sample=self.do_sample,
-            pad_token_id=self.tokenizer.pad_token_id,
-            eos_token_id=self.tokenizer.eos_token_id
-        )
-
+        with torch.inference_mode():
+            outputs = self.model.generate(
+                **inputs,
+                repetition_penalty=self.repetition_penalty,
+                max_new_tokens=self.max_new_tokens,
+                temperature=self.temperature,
+                top_p=self.top_p,
+                num_beams=self.num_beams,
+                do_sample=self.do_sample,
+                pad_token_id=self.tokenizer.pad_token_id,
+                eos_token_id=self.tokenizer.eos_token_id
+            )
         generated_ids = outputs[0, input_len:]
         generated_text = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
         return generated_text
