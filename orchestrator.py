@@ -1,168 +1,195 @@
 import argparse
 import fnmatch
 import yaml
+import json
 import re
+import os
+import asyncio
+import time
 from typing import List, Dict, Any
 
-import asyncio
-
 from parser import parse_files
-from llm import *
+
+from services.serviceGeneration import GenerationService
 
 
-def collect_openapi_files(base_directory: str, patterns: List[str]) -> List[str]:
-    if not os.path.isdir(base_directory):
-        raise FileNotFoundError
+class Orchestrator:
+    def __init__(self, gen_service):
+        self.gen_service = gen_service
 
-    result = []
 
-    for root, dirs, files in os.walk(base_directory):
-        for fname in files:
-            for pattern in patterns:
-                if fnmatch.fnmatch(fname, pattern):
-                    file_path = os.path.join(root, fname)
-                    if os.path.isfile(file_path):
-                        result.append(file_path)
-    return result
+    def collect_openapi_files(self, base_directory: str, patterns: List[str]) -> List[str]:
+        if not os.path.isdir(base_directory):
+            raise FileNotFoundError
 
-def normalize_methods(raw: List) -> List[Dict[str, Any]]:
-    result = []
+        result = []
 
-    for entry in raw:
-        if not isinstance(entry, (list, tuple)) or len(entry) < 2:
-            continue
+        for root, dirs, files in os.walk(base_directory):
+            for fname in files:
+                for pattern in patterns:
+                    if fnmatch.fnmatch(fname, pattern):
+                        file_path = os.path.join(root, fname)
+                        if os.path.isfile(file_path):
+                            result.append(file_path)
+        return result
 
-        path, info = entry[0], entry[1] or {}
+    def normalize_methods(self, raw: List) -> List[Dict[str, Any]]:
+        result = []
 
-        for op_name in ("get", "post", "put", "patch", "delete", "options"):
-            op = info.get(op_name)
-            if op is None:
+        for entry in raw:
+            if not isinstance(entry, (list, tuple)) or len(entry) < 2:
                 continue
 
-            raw_params = op.get("parameters") or []
+            path, info = entry[0], entry[1] or {}
 
-            compacted_params = []
-            for param in raw_params:
-                scm = param.get("schema") or {}
-                compacted_params.append({
-                    "name": param.get("name"),
-                    "in": param.get("in"),
-                    "required": bool(param.get("required")),
-                    "type": scm.get("type") if isinstance(param, dict) else None
+            for op_name in ("get", "post", "put", "patch", "delete", "options"):
+                op = info.get(op_name)
+                if op is None:
+                    continue
+
+                raw_params = op.get("parameters") or []
+
+                compacted_params = []
+                for param in raw_params:
+                    scm = param.get("schema") or {}
+                    compacted_params.append({
+                        "name": param.get("name"),
+                        "in": param.get("in"),
+                        "required": bool(param.get("required")),
+                        "type": scm.get("type") if isinstance(param, dict) else None
+                    })
+
+                doc = op.get("summary") or op.get("description") or ""
+
+                result.append({
+                    "method": f"{op_name.upper()} {path}",
+                    "params": compacted_params,
+                    "docstring": doc
                 })
-
-            doc = op.get("summary") or op.get("description") or ""
-
-            result.append({
-                "method": f"{op_name.upper()} {path}",
-                "params": compacted_params,
-                "docstring": doc
-            })
-    return result
+        return result
 
 
-def safe_json_loads(json_str: str):
-    try:
-        return json.loads(json_str)
-    except json.JSONDecodeError as e:
-        print(f"JSON decode error: {e}")
-        print(f"Problematic JSON: {json_str}")
+    def safe_json_loads(self, json_str: str):
         try:
-            fixed_json = re.sub(r',\s*}\s*}\s*$', '}}', json_str)
-            fixed_json = re.sub(r'\}\s*\}\s*$', '}}', fixed_json)
-            return json.loads(fixed_json)
-        except:
-            return None
-
-def parse_methods(yaml_file: dict, n: int):
-
-    paths = list(yaml_file['paths'].items())
-    normalized = normalize_methods(paths)
-    data = [normalized[i:i + n] for i in range(0, len(normalized), n)]
-    return data
-
-
-def parse_llm_response(response: str):
-    result = re.search(r"<json>(.*?)</json>", response, flags=re.DOTALL | re.IGNORECASE)
-    if result is None:
-        print(f"Failed to parse {response}")
-        return None
-    return result.group(1)
-
-
-def add_documentation(files_notation_list: list, docs_list: dict) -> dict:
-    result = {}
-
-    for file_name, file_content in files_notation_list:
-        result[file_name] = file_content.copy()
-
-        if file_name not in docs_list:
-            continue
-
-        for doc_item in docs_list[file_name]:
-            method_str = doc_item.get('method', '')
-            if not method_str:
-                continue
-
-            parts = method_str.split(' ', 1)
-            if len(parts) != 2:
-                continue
-
-            http_method, path = parts[0].lower(), parts[1]
-
-            if path in file_content.get('paths', {}):
-                path_info = file_content['paths'][path]
-                if http_method in path_info:
-                    if 'summary' in doc_item and doc_item['summary']:
-                        path_info[http_method]['summary'] = doc_item['summary']
-                    if 'description' in doc_item and doc_item['description']:
-                        path_info[http_method]['description'] = doc_item['description']
-
-    return result
-
-async def process_documentation(notations: List, max_concurrency: int = 1):
-    llm = await asyncio.to_thread(LLM)
-    sem = asyncio.Semaphore(max_concurrency)
-    result = {}
-
-    async def safe_get_doc(file_name, method_chunk):
-        async with sem:
+            return json.loads(json_str)
+        except json.JSONDecodeError as e:
+            print(f"JSON decode error: {e}")
+            print(f"Problematic JSON: {json_str}")
             try:
-                raw = await asyncio.to_thread(llm.generate, method_chunk)
-            except Exception as e:
-                print("LLM generate failed")
-                return file_name, None, e
-            json_part = parse_llm_response(raw)
-            parsed = safe_json_loads(json_part) if json_part else None
-            return file_name, parsed, None
+                fixed_json = re.sub(r',\s*}\s*}\s*$', '}}', json_str)
+                fixed_json = re.sub(r'\}\s*\}\s*$', '}}', fixed_json)
+                return json.loads(fixed_json)
+            except:
+                return None
 
-    tasks = []
+    def parse_methods(self, yaml_file: dict, n: int):
 
-    for file_name, methods in notations:
-        chunks = parse_methods(methods, n=2)
-        for chunk in chunks:
-            tasks.append(asyncio.create_task(safe_get_doc(file_name, chunk)))
+        paths = list(yaml_file['paths'].items())
+        normalized = self.normalize_methods(paths)
+        data = [normalized[i:i + n] for i in range(0, len(normalized), n)]
+        return data
 
-    for task in asyncio.as_completed(tasks):
-        file_name, parsed, exc = await task
-        if file_name not in result:
+
+    def parse_llm_response(self, response: str):
+        result = re.search(r"<json>(.*?)</json>", response, flags=re.DOTALL | re.IGNORECASE)
+        if result is None:
+            print(f"Failed to parse: {response}")
+            return None
+        return result.group(1)
+
+
+    def add_documentation(self, files_notation_list: list, docs_list: dict) -> dict:
+        result = {}
+
+        for file_name, file_content in files_notation_list:
+            result[file_name] = file_content.copy()
+
+            if file_name not in docs_list:
+                continue
+
+            for doc_item in docs_list[file_name]:
+                method_str = doc_item.get('method', '')
+                if not method_str:
+                    continue
+
+                parts = method_str.split(' ', 1)
+                if len(parts) != 2:
+                    continue
+
+                http_method, path = parts[0].lower(), parts[1]
+
+                if path in file_content.get('paths', {}):
+                    path_info = file_content['paths'][path]
+                    if http_method in path_info:
+                        if 'summary' in doc_item and doc_item['summary']:
+                            path_info[http_method]['summary'] = doc_item['summary']
+                        if 'description' in doc_item and doc_item['description']:
+                            path_info[http_method]['description'] = doc_item['description']
+
+        return result
+
+    """async def process_documentation(notations: List, max_concurrency: int = 2):
+        llm = await asyncio.to_thread(LLM)
+        sem = asyncio.Semaphore(max_concurrency)
+        result = {}
+    
+        async def safe_get_doc(file_name, method_chunk):
+            async with sem:
+                try:
+                    raw = await asyncio.to_thread(llm.generate, method_chunk)
+                except Exception as e:
+                    print("LLM generate failed")
+                    return file_name, None, e
+                json_part = parse_llm_response(raw)
+                parsed = safe_json_loads(json_part) if json_part else None
+                return file_name, parsed, None
+    
+        tasks = []
+    
+        for file_name, methods in notations:
+            chunks = parse_methods(methods, n=2)
+            for chunk in chunks:
+                tasks.append(asyncio.create_task(safe_get_doc(file_name, chunk)))
+    
+        for task in asyncio.as_completed(tasks):
+            file_name, parsed, exc = await task
+            if file_name not in result:
+                result[file_name] = []
+            if exc:
+                print("Error while generating for %s: %s", file_name, exc)
+                continue
+            if parsed and isinstance(parsed, list):
+                result[file_name].extend(parsed)
+    
+        return result"""
+
+    def get_documentation(self, notations: List, max_concurrency: int = 2):
+        result = {}
+
+        for file_name, methods in notations:
             result[file_name] = []
-        if exc:
-            print("Error while generating for %s: %s", file_name, exc)
-            continue
-        if parsed and isinstance(parsed, list):
-            result[file_name].extend(parsed)
+            chunks = self.parse_methods(methods, n=max_concurrency)
+            for chunk in chunks:
+                raw = self.gen_service.generate(chunk)
+                json_part = self.parse_llm_response(raw)
+                parsed = self.safe_json_loads(json_part) if json_part else None
+                if parsed and isinstance(parsed, list):
+                    result[file_name].extend(parsed)
 
-    return result
+        return result
+
 
 
 async def main(path, patterns):
-    res = collect_openapi_files(path, patterns)
+
+    genService = GenerationService()
+    orchestrator = Orchestrator(genService)
+    res = orchestrator.collect_openapi_files(path, patterns)
     notation = parse_files(res)
 
-    doc = await process_documentation(notation)
+    doc = orchestrator.get_documentation(notation)
 
-    new_docs = add_documentation(notation, doc)
+    new_docs = orchestrator.add_documentation(notation, doc)
 
     for file, doc in new_docs.items():
         file = file.split(".")[0]

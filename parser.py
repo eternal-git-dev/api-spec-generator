@@ -32,24 +32,26 @@ def get_decorator_name(dec: ast.AST) -> str:
         return func.id
     return ""
 
+
 def parse_file(filename: str):
-    with open(filename) as f:
-        f = f.read()
+    with open(filename) as file:
+        content = file.read()
 
-    tree = ast.parse(f)
-
+    tree = ast.parse(content)
     endpoints = []
 
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
+            function_calls = extract_calls_from_function(node)
+
             for decorator in node.decorator_list:
                 name = get_decorator_name(decorator)
                 if name == "route":
-
                     if isinstance(decorator, ast.Call):
                         path, methods = extract_route_info(decorator)
                     else:
                         path, methods = None, None
+
                     doc = ast.get_docstring(node) or ""
                     summary = doc.strip().splitlines()[0] if doc else ""
                     params = []
@@ -65,14 +67,40 @@ def parse_file(filename: str):
                             else:
                                 ann = ast.unparse(arg.annotation)
                         params.append({"name": arg.arg, "type": ann})
-                        endpoints.append({
-                            "function": node.name,
-                            "path": path or "/<unknown>",
-                            "methods": methods or ["GET"],
-                            "summary": summary,
-                            "params": params,
-                        })
+
+                    endpoints.append({
+                        "function": node.name,
+                        "path": path or "/<unknown>",
+                        "methods": methods or ["GET"],
+                        "summary": summary,
+                        "params": params,
+                        "calls": function_calls,
+                        "code_snippet": ast.unparse(node)
+                    })
+
     return endpoints
+
+
+def extract_calls_from_function(func_node):
+    calls = []
+
+    for body_item in func_node.body:
+        if isinstance(body_item, ast.Return) and body_item.value:
+            for child in ast.walk(body_item.value):
+                if isinstance(child, ast.Call):
+                    if isinstance(child.func, ast.Name):
+                        calls.append(child.func.id)
+                    elif isinstance(child.func, ast.Attribute):
+                        parts = []
+                        current = child.func
+                        while isinstance(current, ast.Attribute):
+                            parts.append(current.attr)
+                            current = current.value
+                        if isinstance(current, ast.Name):
+                            parts.append(current.id)
+                        calls.append('.'.join(reversed(parts)))
+
+    return calls
 
 def parse_files(file_dirs: List[str]) -> list[tuple[str, dict[str, Any]]]:
     result = []
