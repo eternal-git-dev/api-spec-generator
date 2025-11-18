@@ -42,7 +42,6 @@ class RemoteLLM():
 
         if not response:
             return None
-        print('LLM response:', json.dumps(response, indent=2, ensure_ascii=False))
         choices = response["choices"]
         message = choices[0]["message"]['content']
         return message if len(message) > 0 else None
