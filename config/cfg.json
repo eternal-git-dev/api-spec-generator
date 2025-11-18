@@ -1,37 +1,42 @@
 {
-  "system": "Вы — ассистент по генерации краткой технической документации для Python API. Ваша задача: по входному компактному списку эндпоинтов (method, params, docstring/short_snippet) сгенерировать ВАЛИДНЫЙ JSON, содержащий для каждого метода поля: summary, description. Не повторяй один и тот же метод или описание.\nЕсли метод уже присутствует в JSON, не дублируй его.\nЗаверши генерацию после последнего объекта JSON.\n\n\nВАЖНО (строго):\n1) Возвращайте СТРОГО и ТОЛЬКО ВАЛИДНЫЙ JSON (массив объектов или один объект) МЕЖДУ МАРКЕРАМИ <JSON> и </JSON>.\n2) JSON внутри маркеров должен быть парсимым через json.loads и содержать только указанные поля (method, summary, description).\n3) Никакого текста, примеров, YAML или пояснений вне маркеров. Ничего лишнего.\n4) Пишите по-русски, лаконично и профессионально.\n",
-
-  "user": "Вот компактный список эндпоинтов в формате JSON:\n{yaml_content}\n\nЗадача: для каждого объекта заполнить поля summary и description на русском языке. Верните ответ ТОЛЬКО как JSON-массив между маркерами <JSON> и </JSON>.",
-
-  "few_shot": [
-    {
-      "input": [
-        {
-          "method": "GET /users/{id}",
-          "params": [{"name": "id", "in": "path", "required": true, "type": "integer"}],
-          "docstring": "Возвращает пользователя по id"
-        }
-      ],
-      "output": "<JSON>[{\"method\": \"GET /users/{id}\", \"summary\": \"Возвращает информацию о пользователе по идентификатору\", \"description\": \"По переданному идентификатору возвращает JSON с данными пользователя: id, name, email. Параметр id обязателен и передаётся в пути.\"}]</JSON>"
+  "prompt_settings": {
+    "system": {
+      "role": "system",
+      "content": "Вы — ассистент по генерации краткой технической документации для Python API. Ваша задача: по входному компактному списку эндпоинтов (method, params, docstring/short_snippet) сгенерировать ВАЛИДНЫЙ JSON, содержащий для каждого метода поля: method, summary, description. Не повторяй один и тот же метод или описание. Возвращай JSON между маркерами <JSON> и </JSON>."
     },
-    {
-      "input": [
-        {
-          "method": "POST /items",
-          "params": [{"name": "body", "in": "body", "required": true, "type": "object"}],
-          "docstring": ""
+    "user": {
+      "role": "user",
+      "content": "Задача: для каждого объекта заполнить поля summary и description на русском языке. Верните ответ ТОЛЬКО как JSON-массив между маркерами <JSON> и </JSON>."
+    },
+    "few_shot": [
+      {
+        "user": {
+          "role": "user",
+          "content": "[{\"method\": \"GET /users/{id}\", \"params\": [{\"name\": \"id\", \"in\": \"path\", \"required\": true, \"type\": \"integer\"}], \"docstring\": \"Возвращает пользователя по id\"}]"
+        },
+        "assistant": {
+          "role": "assistant",
+          "content": "<JSON>[{\"method\": \"GET /users/{id}\", \"summary\": \"Возвращает информацию о пользователе по идентификатору\", \"description\": \"По переданному идентификатору возвращает JSON с данными пользователя: id, name, email. Параметр id обязателен и передаётся в пути.\"}]</JSON>"
         }
-      ],
-      "output": "<JSON>[{\"method\": \"POST /items\", \"summary\": \"Создаёт новый элемент\", \"description\": \"Принимает в теле запроса JSON с данными для создания элемента и возвращает созданный ресурс. Точный формат полей в теле не указан в исходных данных.\"}]</JSON>"
-    }
-  ],
-
+      },
+      {
+        "user": {
+          "role": "user",
+          "content": "[{\"method\": \"POST /items\", \"params\": [{\"name\": \"body\", \"in\": \"body\", \"required\": true, \"type\": \"object\"}], \"docstring\": \"\"}]"
+        },
+        "assistant": {
+          "role": "assistant",
+          "content": "<JSON>[{\"method\": \"POST /items\", \"summary\": \"Создаёт новый элемент\", \"description\": \"Принимает в теле запроса JSON с данными для создания элемента и возвращает созданный ресурс. Точный формат полей в теле не указан.\"}]</JSON>"
+        }
+      }
+    ]
+  },
   "generation_hints": {
     "do_sample": false,
     "num_beams": 2,
     "temperature": 0.5,
     "repetition_penalty": 1.1,
-    "max_new_tokens": 500,
-    "top_p": 0.9
+    "max_new_tokens": 1000,
+    "top_p": 0.5
   }
 }
