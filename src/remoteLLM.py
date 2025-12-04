@@ -42,10 +42,6 @@ class Remote():
 
         if not response:
             return None
-        print('-' * 10)
-        print('prompt:', json.dumps(prompt, indent=2, ensure_ascii=False))
-        print('LLM response:', json.dumps(response, indent=2, ensure_ascii=False))
-        print('-' * 10)
         choices = response.get("choices", None)
 
         if not choices:
@@ -71,7 +67,3 @@ class Remote():
         if not remaining:
             return True
         return True if remaining > 0 else False
-
-"""llm = RemoteLLM(repetition_penalty=1.1, max_new_tokens=500, temperature=0.5, top_p=0.9, num_beams=2, do_sample=False)
-
-print(json.dumps(llm.get_limits(), indent=2))"""

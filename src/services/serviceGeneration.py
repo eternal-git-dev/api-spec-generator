@@ -46,11 +46,8 @@ class GenerationService:
         prompt = self._build_prompt(input)
         result = gen.generate(prompt)
         if not result:
-            print('--------------------------')
             print('Ошибка при генерации ответа.')
-            print(input)
-            print('--------------------------')
-            time.sleep(5)
+            return None
         return result
 
     def _build_prompt(self, input):

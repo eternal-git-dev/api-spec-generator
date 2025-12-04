@@ -22,7 +22,6 @@ class Orchestrator:
         doc_lookup = {}
         for file_name, doc_methods in documentation.items():
             for doc_method in doc_methods:
-                print('doc method', doc_method)
                 req, method_path = doc_method.get("method", "").split()
                 key = (file_name, method_path, req)
                 doc_lookup[key] = doc_method
@@ -33,10 +32,8 @@ class Orchestrator:
 
                 for req in reqs:
                     key = (file_name, method_path, req)
-                    print('ir key: ', key)
                     if key in doc_lookup:
                         doc_method = doc_lookup[key]
-                        print('YAY, {}'.format(method_path))
                         ir_method.summary = doc_method.get("summary", "")
                         ir_method.description = doc_method.get("description", "")
         return enriched_ir

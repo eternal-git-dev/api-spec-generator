@@ -10,10 +10,6 @@ class OpenApiBuilder:
 
     def build(self, enriched_ir: List[Tuple[str, List[EndPoint]]], title: str = "API",
                            version: str = "1.0.0") -> None:
-        """
-        Создает отдельные YAML файлы OpenAPI 3.0 для каждого файла из enriched_ir.
-        """
-        # Создаем выходную директорию, если она не существует
         os.makedirs(self.output_dir, exist_ok=True)
 
         for file_name, methods in enriched_ir:
@@ -74,6 +70,6 @@ class OpenApiBuilder:
             with open(output_file, "w", encoding="utf-8") as f:
                 yaml.dump(openapi, f, allow_unicode=True, encoding="utf-8",
                           default_flow_style=False, sort_keys=False)
-            print(f"Created OpenAPI specification: {output_file}")
+            print(f"Создали OpenAPI файл спецификации: {output_file}")
         except Exception as e:
             print(f"Error writing YAML file {output_file}: {e}")
