@@ -1,5 +1,6 @@
 import ast
-from typing import List, Dict, Any
+from typing import List, Tuple
+from models import EndPoint
 
 
 def extract_route_info(dec: ast.Call):
@@ -33,6 +34,21 @@ def get_decorator_name(dec: ast.AST) -> str:
     return ""
 
 
+def get_optimized_snippet(node: ast.FunctionDef, max_lines: int = 10, max_length: int = 300) -> str:
+    source = ast.unparse(node)
+    lines = source.split('\n')
+
+    if len(lines) <= max_lines and len(source) <= max_length:
+        return source
+
+    snippet_lines = lines[:max_lines]
+    snippet = '\n'.join(snippet_lines)
+
+    if len(snippet) > max_length:
+        snippet = snippet[:max_length].rsplit('\n', 1)[0]
+
+    return snippet
+
 def parse_file(filename: str):
     with open(filename) as file:
         content = file.read()
@@ -54,6 +70,7 @@ def parse_file(filename: str):
 
                     doc = ast.get_docstring(node) or ""
                     summary = doc.strip().splitlines()[0] if doc else ""
+                    description = doc.strip().splitlines()[1:] if doc else ""
                     params = []
                     for arg in node.args.args:
                         if arg.arg == "self":
@@ -67,16 +84,8 @@ def parse_file(filename: str):
                             else:
                                 ann = ast.unparse(arg.annotation)
                         params.append({"name": arg.arg, "type": ann})
-
-                    endpoints.append({
-                        "function": node.name,
-                        "path": path or "/<unknown>",
-                        "methods": methods or ["GET"],
-                        "summary": summary,
-                        "params": params,
-                        "calls": function_calls,
-                        "code_snippet": ast.unparse(node)
-                    })
+                    endpoints.append(EndPoint(function=node.name, path=path or "/<unknown>",methods=methods or ["GET"],
+                                              summary=summary,params=params, calls=function_calls, code_snippet=get_optimized_snippet(node), description=description))
 
     return endpoints
 
@@ -102,58 +111,12 @@ def extract_calls_from_function(func_node):
 
     return calls
 
-def parse_files(file_dirs: List[str]) -> list[tuple[str, dict[str, Any]]]:
+def parse_files(file_dirs: List[str]) -> List[Tuple[str, list]]:
     result = []
     for file_dir in file_dirs:
         endpoints = parse_file(file_dir)
         if endpoints:
-            openapi = build_openapi(endpoints)
             file_name = file_dir.split("\\")[-1]
-            result.append((file_name, openapi))
+            result.append((file_name, endpoints))
 
     return result
-
-def build_openapi(endpoints: List[Dict[str, Any]]) -> Dict[str, Any]:
-    openapi = {
-        "openapi": "3.1.0",
-        "info": {"title": "Auto-generated API", "version": "0.0.1"},
-        "paths": {}
-    }
-    for ep in endpoints:
-        path = ep["path"]
-        if path not in openapi["paths"]:
-            openapi["paths"][path] = {}
-        for method in ep["methods"]:
-            m = method.lower()
-            openapi["paths"][path][m] = {
-                "summary": ep["summary"],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "application/json": {
-                                "schema": {"type": "object"}
-                            }
-                        }
-                    }
-                }
-            }
-            if ep["params"]:
-                params_list = []
-                for p in ep["params"]:
-                    if "id" in p["name"].lower():
-                        params_list.append({
-                            "name": p["name"],
-                            "in": "path",
-                            "required": True,
-                            "schema": {"type": "string"}
-                        })
-                    else:
-                        params_list.append({
-                            "name": p["name"],
-                            "in": "query",
-                            "required": False,
-                            "schema": {"type": "string"}
-                        })
-                openapi["paths"][path][m]["parameters"] = params_list
-    return openapi

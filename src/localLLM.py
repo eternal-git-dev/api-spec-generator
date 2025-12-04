@@ -1,10 +1,8 @@
-import os
-import json
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 
 
-class LocalLLM():
+class Local():
     def __init__(self, repetition_penalty, max_new_tokens, temperature, top_p, num_beams, do_sample):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.num_beams = num_beams
