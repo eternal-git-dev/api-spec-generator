@@ -14,7 +14,7 @@ class Remote():
         self.num_beams = num_beams
         self.do_sample = do_sample
 
-        self.key = os.getenv("DEEPSEEK_API")
+        self.key = os.getenv("API_KEY")
 
     def _send_request(self, request: dict):
         response = requests.request(method=request["method"], url=request["url"], json=request.get('json'),
