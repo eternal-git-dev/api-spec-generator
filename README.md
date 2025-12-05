@@ -13,5 +13,12 @@
 На основе полученного Enriched IR генерирует YAML файл
 * API-client generator
 На основе полученного Enriched IR генерирует готовый API-клиент с добавленной документации к методам
-Архитектурной диаграмма в формате Mermaid:
-<img width="512" height="891" alt="Image" src="https://github.com/user-attachments/assets/ce70388d-af50-4ef9-86be-b876a5b0e58e" />
+
+Архитектурной диаграмма:
+
+<p align="center">
+  <img width="512" height="891" alt="Image" src="https://github.com/user-attachments/assets/ce70388d-af50-4ef9-86be-b876a5b0e58e" />
+</p>
+
+___
+# Описание основых модулей
