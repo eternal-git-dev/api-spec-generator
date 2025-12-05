@@ -14,4 +14,4 @@
 * API-client generator
 На основе полученного Enriched IR генерирует готовый API-клиент с добавленной документации к методам
 Архитектурной диаграмма в формате Mermaid:
-<img width="1173" height="2032" alt="Image" src="https://github.com/user-attachments/assets/d384e47e-9fed-41fc-b8e7-176a277f6d9a" />
+<img width="512" height="891" alt="Image" src="https://github.com/user-attachments/assets/ce70388d-af50-4ef9-86be-b876a5b0e58e" />
