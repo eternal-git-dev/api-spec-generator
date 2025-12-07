@@ -1,7 +1,7 @@
 POETRY := poetry
 SCRIPT := .\src\main.py
 
-PATH_ARG ?= C:\Users\eternal\PycharmProjects\LLM\data\check
+PATH_ARG ?= C:\path\to\your\files
 PATTERNS_ARG ?= "*.py"
 MODE_ARG ?= auto
 OUTPUT_ARG ?= output
