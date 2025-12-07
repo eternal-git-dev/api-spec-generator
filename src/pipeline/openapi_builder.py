@@ -2,7 +2,7 @@ import os
 import yaml
 from typing import List, Tuple
 from models import EndPoint
-
+from pipeline.utils import to_openapi_type
 
 class OpenApiBuilder:
     def __init__(self, output_dir):
@@ -35,7 +35,7 @@ class OpenApiBuilder:
                         "name": p.get("name"),
                         "in": p.get("in", "query"),
                         "required": bool(p.get("required", False)),
-                        "schema": {"type": p.get("type", "string")},
+                        "schema": {"type": to_openapi_type(p.get("type", "string"))},
                         "description": p.get("description", "")
                     })
 
@@ -44,7 +44,7 @@ class OpenApiBuilder:
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
-                                "schema": {"response_schema", {"type": "object"}}
+                                "schema": {"type": "object"}
                             }
                         }
                     }

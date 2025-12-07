@@ -15,7 +15,7 @@ class Orchestrator:
         notation = parse_files([str(p) for p in files])
         documentation = self.doc_gen.get_documentation(notation)
         enriched = self._merge_docs(notation, documentation)
-        #self.openapi_builder.build(enriched)
+        self.openapi_builder.build(enriched)
         self.client_generator.create_clients(enriched, Path(output_dir))
 
     def _merge_docs(self, enriched_ir: List[Tuple[str, List[EndPoint]]], documentation: Dict[str, List[dict]]):
