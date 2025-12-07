@@ -85,3 +85,9 @@ poetry run python src/main.py \
 
 Результат работы:
 * Созданный API-клиент:
+
+<img width="1483" height="866" alt="Image" src="https://github.com/user-attachments/assets/2540b42e-212d-4a9d-b157-85e452799b91" />
+
+* Созданный файл с нотацией:
+
+<img width="600" height="838" alt="Image" src="https://github.com/user-attachments/assets/30f888cc-1ad6-4267-a84d-d537b28d90e8" />
