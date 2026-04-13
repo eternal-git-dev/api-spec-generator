@@ -1,5 +1,7 @@
 import json
 import re
+import time
+
 from pipeline.utils import batch_convert_to_dicts
 
 
@@ -31,6 +33,7 @@ class DocGenerator:
             chunks = batch_convert_to_dicts(methods, max_concurrency)
             for chunk in chunks:
                 raw = self.gen.generate(chunk)
+                print(f'{raw=}')
                 json_part = self._parse_llm_response(raw)
                 parsed = self._safe_json_loads(json_part) if json_part else None
                 if parsed and isinstance(parsed, list):

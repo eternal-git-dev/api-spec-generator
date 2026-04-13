@@ -24,7 +24,7 @@ class Remote():
 
     def generate(self, prompt) -> str | None:
         data = {
-            "model": "amazon/nova-2-lite-v1:free",
+            "model": "nvidia/nemotron-3-nano-30b-a3b:free",
             'messages': prompt,
             'max_tokens': self.max_new_tokens,
         }
@@ -39,7 +39,6 @@ class Remote():
             "json": data,
         }
         response = self._send_request(request)
-
         if not response:
             return None
         choices = response.get("choices", None)

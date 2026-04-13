@@ -32,15 +32,14 @@ class Local():
 
         outputs = self.model.generate(
             **inputs,
-            max_new_tokens=300,
-            do_sample=False,
-            num_beams=2,
-            repetition_penalty=1.1,
+            max_new_tokens=self.max_new_tokens,
+            do_sample=self.do_sample,
+            num_beams=self.num_beams,
+            repetition_penalty=self.repetition_penalty,
             pad_token_id=self.tokenizer.pad_token_id,
             eos_token_id=self.tokenizer.eos_token_id
         )
 
-        #raw = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
         gen_ids = outputs[0, input_len:]
         gen_text = self.tokenizer.decode(gen_ids, skip_special_tokens=True)
         return gen_text
