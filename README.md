@@ -25,12 +25,14 @@
 Архитектурной диаграмма:
 
 <p align="center">
-  <img width="512" height="891" alt="Image" src="https://github.com/user-attachments/assets/ce70388d-af50-4ef9-86be-b876a5b0e58e" />
+  <img width="7652" height="937" alt="API Client Generation from-2025-12-15-202756" src="https://github.com/user-attachments/assets/0019106b-46ed-4522-a750-60bcb3ce42ad" />
+
 </p>
 
 ___
 # Описание основых модулей
 * src/parser.py - Анализирует исходный код и извлекает информации об эндпоинтах. Поддерживает парсинг одного или нескольких файлов. Для работы используется модуль ```ast```
+
   Основные возможности:
   * Определение маршрутов
   * Анализ сигнатуры функций
@@ -58,7 +60,7 @@ make run
 ```bash
 make run-local
 ```
-# Запуск с удалённой LLM
+* Запуск с удалённой LLM
 ```bash
 make run-remote
 ```

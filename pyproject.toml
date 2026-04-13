@@ -2,7 +2,7 @@
 name = "api-doc-generator"
 version = "0.1.0"
 package-mode = false
-description = "Генератор технической документации"
+description = "Генератор API-клиентов"
 authors = [
     {name = "Eternal"}
 ]
