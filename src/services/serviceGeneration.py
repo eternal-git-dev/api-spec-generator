@@ -1,9 +1,9 @@
 import json
 import os
-import time
 
 from localLLM import Local
 from remoteLLM import Remote
+
 
 class GenerationService:
     def __init__(self, mode: str):
@@ -20,26 +20,49 @@ class GenerationService:
         self.user = self.prompt_settings["user"]
         self.few_shot = self.prompt_settings["few_shot"]
 
-        self.num_beams = config["generation_hints"]["num_beams"]
-        self.repetition_penalty = config["generation_hints"]["repetition_penalty"]
-        self.max_new_tokens = config["generation_hints"]["max_new_tokens"]
-        self.temperature = config["generation_hints"]["temperature"]
-        self.top_p = config["generation_hints"]["top_p"]
+        hints = config["generation_hints"]
+        self.num_beams = hints["num_beams"]
+        self.repetition_penalty = hints["repetition_penalty"]
+        self.max_new_tokens = hints["max_new_tokens"]
+        self.temperature = hints["temperature"]
+        self.top_p = hints["top_p"]
+        self.do_sample = hints.get("do_sample", False)
 
-        self.do_sample = True
+        self.few_shot_limit = hints.get("few_shot_limit")
 
-        self.local = Local(self.repetition_penalty, self.max_new_tokens, self.temperature, self.top_p, self.num_beams, self.do_sample)
-        self.remote = Remote(self.repetition_penalty, self.max_new_tokens, self.temperature, self.top_p, self.num_beams, self.do_sample)
+        self._local = None
+        self._remote = None
+
+    @property
+    def local(self):
+        if self._local is None:
+            self._local = Local(
+                self.repetition_penalty, self.max_new_tokens, self.temperature,
+                self.top_p, self.num_beams, self.do_sample,
+            )
+        return self._local
+
+    @property
+    def remote(self):
+        if self._remote is None:
+            self._remote = Remote(
+                self.repetition_penalty, self.max_new_tokens, self.temperature,
+                self.top_p, self.num_beams, self.do_sample,
+            )
+        return self._remote
 
     def _isRemoteEnabled(self):
-        return True if self.remote.is_requests_remaining() else False
+        try:
+            return bool(self.remote.is_requests_remaining())
+        except Exception:
+            return False
 
     def _select_engine(self):
         if self.mode == "local":
             return self.local
-        elif self.mode == "remote":
+        if self.mode == "remote":
             return self.remote
-        return self.remote if self._isRemoteEnabled else self.local
+        return self.remote if self._isRemoteEnabled() else self.local
 
     def generate(self, input):
         gen = self._select_engine()
@@ -51,12 +74,18 @@ class GenerationService:
         return result
 
     def _build_prompt(self, input):
-        messages = []
-        messages.append(self.system)
-        messages.append(self.user)
-        for ex in self.few_shot:
+        messages = [self.system, self.user]
+
+        few_shot = self.few_shot
+        if self.few_shot_limit is not None:
+            few_shot = few_shot[: self.few_shot_limit]
+
+        for ex in few_shot:
             messages.append(ex["user"])
             messages.append(ex["assistant"])
 
-        messages.append({"role": "user", "content": "Вот компактный список эндпоинтов:\n" + str(input)})
+        messages.append({
+            "role": "user",
+            "content": "Вот компактный список эндпоинтов:\n" + str(input),
+        })
         return messages

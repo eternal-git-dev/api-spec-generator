@@ -24,7 +24,7 @@ class Remote():
 
     def generate(self, prompt) -> str | None:
         data = {
-            "model": "nvidia/nemotron-3-nano-30b-a3b:free",
+            "model": "anthropic/claude-sonnet-4.6",
             'messages': prompt,
             'max_tokens': self.max_new_tokens,
         }

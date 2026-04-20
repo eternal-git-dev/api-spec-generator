@@ -4,12 +4,13 @@ from typing import List, Tuple
 from models import EndPoint
 from pipeline.utils import to_openapi_type
 
+
 class OpenApiBuilder:
     def __init__(self, output_dir):
         self.output_dir = output_dir
 
     def build(self, enriched_ir: List[Tuple[str, List[EndPoint]]], title: str = "API",
-                           version: str = "1.0.0") -> None:
+              version: str = "1.0.0") -> None:
         os.makedirs(self.output_dir, exist_ok=True)
 
         for file_name, methods in enriched_ir:
@@ -24,18 +25,22 @@ class OpenApiBuilder:
 
             for m in methods:
                 path = m.path or f"/{os.path.basename(file_name)}/{m.function}"
-                http_method = (m.methods[0] or "get").lower()
+
+                http_method = (m.methods[0] if m.methods else "get").lower()
 
                 summary = m.summary or ""
                 description = m.description or ""
 
                 parameters = []
                 for p in m.params:
+                    param_in = p.get("in", "query")
+                    is_required = True if param_in == "path" else bool(p.get("required", False))
                     parameters.append({
                         "name": p.get("name"),
-                        "in": p.get("in", "query"),
-                        "required": bool(p.get("required", False)),
-                        "schema": {"type": to_openapi_type(p.get("type", "string"))},
+                        "in": param_in,
+                        "required": is_required,
+                        # Исправление: защита от None в типе параметра
+                        "schema": {"type": to_openapi_type(p.get("type") or "string")},
                         "description": p.get("description", "")
                     })
 
@@ -68,7 +73,7 @@ class OpenApiBuilder:
     def _safe_write(self, output_file, openapi):
         try:
             with open(output_file, "w", encoding="utf-8") as f:
-                yaml.dump(openapi, f, allow_unicode=True, encoding="utf-8",
+                yaml.dump(openapi, f, allow_unicode=True,
                           default_flow_style=False, sort_keys=False)
             print(f"Создали OpenAPI файл спецификации: {output_file}")
         except Exception as e:

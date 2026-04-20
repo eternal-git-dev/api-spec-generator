@@ -15,4 +15,4 @@ def to_openapi_type(python_type: str) -> str:
         "dict": "object",
         "None": "null",
     }
-    return type_map.get(python_type.lower(), "string")
+    return type_map.get((python_type or "string").lower(), "string")
