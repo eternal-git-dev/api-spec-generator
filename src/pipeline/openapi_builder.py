@@ -39,7 +39,6 @@ class OpenApiBuilder:
                         "name": p.get("name"),
                         "in": param_in,
                         "required": is_required,
-                        # Исправление: защита от None в типе параметра
                         "schema": {"type": to_openapi_type(p.get("type") or "string")},
                         "description": p.get("description", "")
                     })
