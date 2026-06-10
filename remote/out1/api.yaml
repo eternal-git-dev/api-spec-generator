@@ -1,0 +1,134 @@
+openapi: 3.0.0
+info:
+  title: API - api.py
+  version: 1.0.0
+paths:
+  /group/prefixes:
+    get:
+      summary: Возвращает список всех доступных префиксов групп.
+      description: Вызывает groups.get_groupings() для получения всех группировок, извлекает их ключи и возвращает их в виде JSON-объекта по ключу 'prefixes'.
+      parameters: []
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+  /group/<string:prefix>:
+    get:
+      summary: Получает группы, соответствующие указанному префиксу.
+      description: Выполняет поиск групп с заданным префиксом в базе данных, формирует список словарей, содержащих id и title, и возвращает этот список в формате JSON.
+      parameters:
+      - name: prefix
+        in: query
+        required: false
+        schema:
+          type: string
+        description: ''
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+  /variant/list:
+    get:
+      summary: Список всех вариантов.
+      description: Возвращает список идентификаторов всех вариантов. Параметров не
+        требуется.
+      parameters: []
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+  /group/<int:gid>/variant/<int:vid>/task/list:
+    get:
+      summary: Получение списка задач по группе и варианту.
+      description: Возвращает задачи, отфильтрованные указанным идентификатором группы
+        и варианта. Параметры gid и vid должны быть целыми числами.
+      parameters:
+      - name: gid
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: ''
+      - name: vid
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: ''
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+  /group/<int:gid>/variant/<int:vid>/task/<int:tid>:
+    get:
+      summary: Получение статуса задачи.
+      description: Возвращает текущий статус задачи, определённый идентификаторами
+        группы, варианта и задачи. Принимает параметры gid, vid, tid.
+      parameters:
+      - name: gid
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: ''
+      - name: vid
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: ''
+      - name: tid
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: ''
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      summary: Отправка ответа на задачу.
+      description: Проверяет токен авторизации и изменяет статус задачи, принимая
+        код ответа из тела запроса.
+      parameters:
+      - name: gid
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: ''
+      - name: vid
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: ''
+      - name: tid
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: ''
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
